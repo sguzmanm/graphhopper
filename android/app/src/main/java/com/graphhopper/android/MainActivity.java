@@ -13,10 +13,7 @@ import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.Window;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -28,7 +25,6 @@ import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopper;
 import com.graphhopper.PathWrapper;
 import com.graphhopper.util.Constants;
-import com.graphhopper.util.Helper;
 import com.graphhopper.util.Parameters.Algorithms;
 import com.graphhopper.util.Parameters.Routing;
 import com.graphhopper.util.PointList;
@@ -56,12 +52,8 @@ import org.oscim.theme.VtmThemes;
 import org.oscim.tiling.source.mapfile.MapFileTileSource;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 public class MainActivity extends Activity {
     private static final int NEW_MENU_ID = Menu.FIRST + 1;
@@ -82,6 +74,8 @@ public class MainActivity extends Activity {
     private File mapsFolder;
     private ItemizedLayer<MarkerItem> itemizedLayer;
     private PathLayer pathLayer;
+
+    private static final String SERVER="http://gh-co-map.herokuapp.com/";
 
     protected boolean onLongPress(GeoPoint p) {
         if (!isReady())
@@ -147,8 +141,9 @@ public class MainActivity extends Activity {
         remoteButton = (Button) findViewById(R.id.remote_button);
         // TODO get user confirmation to download
         // if (AndroidHelper.isFastDownload(this))
-        chooseAreaFromRemote();
-        chooseAreaFromLocal();
+        //chooseAreaFromRemote();
+        //chooseAreaFromLocal();
+        startMap();
     }
 
     @Override
@@ -206,146 +201,54 @@ public class MainActivity extends Activity {
         loadMap(new File(mapsFolder,currentArea+"-gh"));
     }
 
-    private void chooseAreaFromLocal() {
-       List<String> nameList = new ArrayList<>();
-        String[] files = mapsFolder.list(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String filename) {
-                return filename != null
-                        && (filename.endsWith(".ghz") || filename
-                        .endsWith("-gh"));
-            }
-        });
-        Collections.addAll(nameList, files);
 
-        if (nameList.isEmpty())
-            return;
-
-        chooseArea(localButton, localSpinner, nameList,
-                new MySpinnerListener() {
-                    @Override
-                    public void onSelect(String selectedArea, String selectedFile) {
-                        initFiles(selectedArea);
-                    }
-                });
-        /*final File file=new File(mapsFolder,"colombia-gh");
+    private void startMap()
+    {
+        final File file=new File(mapsFolder,"colombia-gh");
+        Log.d("HOLA"," ");
         if(file.exists())
-        initializeLocal("colombia");*/
-    }
-
-    private void chooseAreaFromRemote() {
-        new GHAsyncTask<Void, Void, List<String>>() {
-            protected List<String> saveDoInBackground(Void... params)
-                    throws Exception {
-                String[] lines = new AndroidDownloader().downloadAsString(fileListURL, false).split("\n");
-                List<String> res = new ArrayList<>();
-                Log.d("Remote"," ");
-                for (String str : lines) {
-                    Log.d("Remote",str);
-                    int index = str.indexOf("href=\"");
-                    if (index >= 0) {
-                        index += 6;
-                        int lastIndex = str.indexOf(".ghz", index);
-                        if (lastIndex >= 0)
-                            res.add(prefixURL + str.substring(index, lastIndex)
-                                    + ".ghz");
-                    }
-                }
-
-                return res;
-            }
-
-            @Override
-            protected void onPostExecute(List<String> nameList) {
-                if (hasError()) {
-                    getError().printStackTrace();
-                    logUser("Are you connected to the internet? Problem while fetching remote area list: "
-                            + getErrorMessage());
-                    return;
-                } else if (nameList == null || nameList.isEmpty()) {
-                    logUser("No maps created for your version!? " + fileListURL);
-                    return;
-                }
-
-                MySpinnerListener spinnerListener = new MySpinnerListener() {
-                    @Override
-                    public void onSelect(String selectedArea, String selectedFile) {
-                        if (selectedFile == null
-                                || new File(mapsFolder, selectedArea + ".ghz").exists()
-                                || new File(mapsFolder, selectedArea + "-gh").exists()) {
-                            downloadURL = null;
-                        } else {
-                            downloadURL = selectedFile;
-                        }
-                        initFiles(selectedArea);
-                    }
-                };
-                chooseArea(remoteButton, remoteSpinner, nameList,
-                        spinnerListener);
-            }
-        }.execute();
-    }
-
-    private void chooseArea(Button button, final Spinner spinner,
-                            List<String> nameList, final MySpinnerListener myListener) {
-        final Map<String, String> nameToFullName = new TreeMap<>();
-        for (String fullName : nameList) {
-            String tmp = Helper.pruneFileEnd(fullName);
-            if (tmp.endsWith("-gh"))
-                tmp = tmp.substring(0, tmp.length() - 3);
-
-            tmp = AndroidHelper.getFileName(tmp);
-            nameToFullName.put(tmp, fullName);
-        }
-        nameList.clear();
-        nameList.addAll(nameToFullName.keySet());
-        ArrayAdapter<String> spinnerArrayAdapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_dropdown_item, nameList);
-        spinner.setAdapter(spinnerArrayAdapter);
-        button.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Object o = spinner.getSelectedItem();
-                if (o != null && o.toString().length() > 0 && !nameToFullName.isEmpty()) {
-                    String area = o.toString();
-                    myListener.onSelect(area, nameToFullName.get(area));
-                } else {
-                    myListener.onSelect(null, null);
-                }
-            }
-        });
+            initializeLocal("colombia");
+        else downloadingFiles();
     }
 
     void downloadingFiles() {
+        currentArea="colombia";
         final File areaFolder = new File(mapsFolder, currentArea + "-gh");
-        if (downloadURL == null || areaFolder.exists()) {
-            loadMap(areaFolder);
-            return;
-        }
-
+        Log.d("Area",areaFolder.getName());
         final ProgressDialog dialog = new ProgressDialog(this);
-        dialog.setMessage("Downloading and uncompressing " + downloadURL);
+        dialog.setMessage("Downloading and uncompressing ");
         dialog.setIndeterminate(false);
         dialog.setMax(100);
         dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         dialog.show();
 
+
+
         new GHAsyncTask<Void, Integer, Object>() {
             protected Object saveDoInBackground(Void... _ignore)
                     throws Exception {
-                String localFolder = Helper.pruneFileEnd(AndroidHelper.getFileName(downloadURL));
-                localFolder = new File(mapsFolder, localFolder + "-gh").getAbsolutePath();
+                String localFolder="colombia-gh";
+                localFolder = new File(mapsFolder, localFolder).getAbsolutePath();
                 Log.d("URL",downloadURL+ " to "+localFolder);
                 log("downloading & unzipping " + downloadURL + " to " + localFolder);
                 AndroidDownloader downloader = new AndroidDownloader();
                 downloader.setTimeout(30000);
-                downloader.downloadAndUnzip(downloadURL, localFolder,
+                downloader.downloadAndUnzip(SERVER+"map.zip", localFolder,
                         new ProgressListener() {
                             @Override
                             public void update(long val) {
                                 publishProgress((int) val);
                             }
                         });
+                Log.d("1","OK");
+                downloader.downloadAndUnzip(SERVER+"otherFiles.zip", localFolder,
+                        new ProgressListener() {
+                            @Override
+                            public void update(long val) {
+                                publishProgress((int) val);
+                            }
+                        });
+                Log.d("2","OK");
                 return null;
             }
 
