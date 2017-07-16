@@ -196,8 +196,18 @@ public class MainActivity extends Activity {
         downloadingFiles();
     }
 
+    /**
+     * Method created by Sergio. Only called when there is certainty that the File with area name actually exists.
+     * @param area Name of the folder with the map.
+     */
+    private void initializeLocal(String area) {
+        prepareInProgress=true;
+        currentArea=area;
+        loadMap(new File(mapsFolder,currentArea+"-gh"));
+    }
+
     private void chooseAreaFromLocal() {
-        List<String> nameList = new ArrayList<>();
+       List<String> nameList = new ArrayList<>();
         String[] files = mapsFolder.list(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String filename) {
@@ -218,6 +228,9 @@ public class MainActivity extends Activity {
                         initFiles(selectedArea);
                     }
                 });
+        /*final File file=new File(mapsFolder,"colombia-gh");
+        if(file.exists())
+        initializeLocal("colombia");*/
     }
 
     private void chooseAreaFromRemote() {
@@ -226,7 +239,9 @@ public class MainActivity extends Activity {
                     throws Exception {
                 String[] lines = new AndroidDownloader().downloadAsString(fileListURL, false).split("\n");
                 List<String> res = new ArrayList<>();
+                Log.d("Remote"," ");
                 for (String str : lines) {
+                    Log.d("Remote",str);
                     int index = str.indexOf("href=\"");
                     if (index >= 0) {
                         index += 6;
@@ -320,6 +335,7 @@ public class MainActivity extends Activity {
                     throws Exception {
                 String localFolder = Helper.pruneFileEnd(AndroidHelper.getFileName(downloadURL));
                 localFolder = new File(mapsFolder, localFolder + "-gh").getAbsolutePath();
+                Log.d("URL",downloadURL+ " to "+localFolder);
                 log("downloading & unzipping " + downloadURL + " to " + localFolder);
                 AndroidDownloader downloader = new AndroidDownloader();
                 downloader.setTimeout(30000);
@@ -371,6 +387,12 @@ public class MainActivity extends Activity {
 
         // Map position
         GeoPoint mapCenter = tileSource.getMapInfo().boundingBox.getCenterPoint();
+        if(currentArea.contains("colombia"))
+        {
+
+            mapView.map().setMapPosition( 4.603025, -74.065663 , 1 << 18);
+        }
+        else
         mapView.map().setMapPosition(mapCenter.getLatitude(), mapCenter.getLongitude(), 1 << 15);
 
         setContentView(mapView);
