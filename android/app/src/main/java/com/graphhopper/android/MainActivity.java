@@ -67,10 +67,7 @@ public class MainActivity extends Activity {
     private Button remoteButton;
     private volatile boolean prepareInProgress = false;
     private volatile boolean shortestPathRunning = false;
-    private String currentArea = "berlin";
-    private String fileListURL = "http://download2.graphhopper.com/public/maps/" + Constants.getMajorVersion() + "/";
-    private String prefixURL = fileListURL;
-    private String downloadURL;
+    private String currentArea = "colombia";
     private File mapsFolder;
     private ItemizedLayer<MarkerItem> itemizedLayer;
     private PathLayer pathLayer;
@@ -191,28 +188,21 @@ public class MainActivity extends Activity {
         downloadingFiles();
     }
 
-    /**
-     * Method created by Sergio. Only called when there is certainty that the File with area name actually exists.
-     * @param area Name of the folder with the map.
-     */
-    private void initializeLocal(String area) {
-        prepareInProgress=true;
-        currentArea=area;
-        loadMap(new File(mapsFolder,currentArea+"-gh"));
-    }
 
 
     private void startMap()
     {
-        final File file=new File(mapsFolder,"colombia-gh");
+        final File areaFolder=new File(mapsFolder,currentArea+"-gh");
         Log.d("HOLA"," ");
-        if(file.exists())
-            initializeLocal("colombia");
+        if(areaFolder.exists())
+        {
+            prepareInProgress=true;
+            loadMap(areaFolder);
+        }
         else downloadingFiles();
     }
 
     void downloadingFiles() {
-        currentArea="colombia";
         final File areaFolder = new File(mapsFolder, currentArea + "-gh");
         Log.d("Area",areaFolder.getName());
         final ProgressDialog dialog = new ProgressDialog(this);
@@ -229,8 +219,6 @@ public class MainActivity extends Activity {
                     throws Exception {
                 String localFolder="colombia-gh";
                 localFolder = new File(mapsFolder, localFolder).getAbsolutePath();
-                Log.d("URL",downloadURL+ " to "+localFolder);
-                log("downloading & unzipping " + downloadURL + " to " + localFolder);
                 AndroidDownloader downloader = new AndroidDownloader();
                 downloader.setTimeout(30000);
                 downloader.downloadAndUnzip(SERVER+"map.zip", localFolder,
@@ -297,7 +285,6 @@ public class MainActivity extends Activity {
         }
         else
         mapView.map().setMapPosition(mapCenter.getLatitude(), mapCenter.getLongitude(), 1 << 15);
-
         setContentView(mapView);
         loadGraphStorage();
     }
