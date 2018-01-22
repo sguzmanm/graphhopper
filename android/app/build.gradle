@@ -4,10 +4,15 @@ android {
     compileSdkVersion 25
     buildToolsVersion "25.0.3"
 
+    configurations{
+        all*.exclude group: 'com.vividsolutions', module: 'jts-core'
+    }
+
     defaultConfig {
         applicationId "com.graphhopper.android"
         minSdkVersion 10
         targetSdkVersion 22
+        multiDexEnabled true
     }
 
     buildTypes {
